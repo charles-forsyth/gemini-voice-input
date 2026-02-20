@@ -88,7 +88,10 @@ def transcribe_audio():
         )
         sys.exit(1)
 
-    client = SpeechClient()
+    # Chirp model requires a regional endpoint
+    client = SpeechClient(
+        client_options={"api_endpoint": "us-central1-speech.googleapis.com"}
+    )
 
     with open(TEMP_WAV, "rb") as f:
         audio_content = f.read()
@@ -100,7 +103,7 @@ def transcribe_audio():
     )
 
     request = cloud_speech.RecognizeRequest(
-        recognizer=f"projects/{project_id}/locations/global/recognizers/_",
+        recognizer=f"projects/{project_id}/locations/us-central1/recognizers/_",
         config=config,
         content=audio_content,
     )
@@ -113,14 +116,14 @@ def transcribe_audio():
         return transcript.strip()
     except Exception as e:
         print(f"Transcription failed: {e}", file=sys.stderr)
-        return ""
+        sys.exit(1)
 
 
 def copy_to_clipboard(text):
     try:
         subprocess.run(["wl-copy"], input=text.encode("utf-8"), check=True)
         print("📋 Copied to clipboard!", file=sys.stderr)
-    except FileNotFoundError:
+    except Exception:
         try:
             subprocess.run(
                 ["xclip", "-selection", "clipboard"],
@@ -133,6 +136,7 @@ def copy_to_clipboard(text):
                 "Could not copy to clipboard. Please install wl-clipboard or xclip.",
                 file=sys.stderr,
             )
+            sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -45,8 +45,9 @@ def test_transcribe_audio_exception(mock_speech_client, mock_auth_default):
     mock_file.__enter__.return_value.read.return_value = b"test audio"
     with patch("builtins.open", return_value=mock_file):
         with patch("builtins.print") as mock_print:
-            res = voice_agent.transcribe_audio()
+            with pytest.raises(SystemExit) as e:
+                voice_agent.transcribe_audio()
+            assert e.value.code == 1
             mock_print.assert_called_with(
                 "Transcription failed: API error", file=sys.stderr
             )
-            assert res == ""
