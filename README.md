@@ -1,63 +1,62 @@
-# Gemini Voice Input
+# 🎙️ Gemini Voice Input
 
-## Project Overview
-`gemini-voice-input` is a Python-based utility that enables voice-to-text input directly to the system clipboard using the Google Cloud Speech-to-Text API. It records audio from the microphone until a period of silence is detected, transcribes the speech using the advanced `chirp` (Chirp 3) model via the `google-cloud-speech` SDK, and automatically copies the transcribed text to the clipboard (supporting both Wayland via `wl-copy` and X11 via `xclip`).
+![Python](https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white)
+![Google Cloud](https://img.shields.io/badge/Google_Cloud-Speech--to--Text-4285F4?logo=googlecloud&logoColor=white)
+![uv](https://img.shields.io/badge/managed_by-uv-purple)
+![Linux Support](https://img.shields.io/badge/OS-Linux-FCC624?logo=linux&logoColor=black)
 
-The project uses `uv` for modern Python dependency management and includes bash scripts for seamless integration with desktop environments (e.g., binding to a global keyboard shortcut).
+`gemini-voice-input` is a lightning-fast, Python-based utility that brings high-accuracy voice-to-text directly to your Linux clipboard. By leveraging the **Google Cloud Speech-to-Text V2 API (Chirp Model)**, it seamlessly converts spoken audio into text and automatically copies it to your clipboard for instant pasting anywhere.
 
-**Core Technologies:**
-*   **Python:** >= 3.12
-*   **Package Manager:** `uv`
-*   **Audio Recording:** `sounddevice`, `numpy`, `scipy`
-*   **Transcription:** `google-cloud-speech` (Google Cloud Speech-to-Text v2 API, Chirp model)
-*   **System Integration:** Bash, `wl-clipboard` / `xclip`, `notify-send`, `paplay`
+---
 
-## Building and Running
+## ✨ Features
+- **Hands-Free Transcription:** Automatically stops recording after detecting a period of silence.
+- **State-of-the-Art Accuracy:** Powered by Google's `chirp` foundation model.
+- **Universal Clipboard Support:** Automatically detects and supports both **Wayland** (`wl-copy`) and **X11** (`xclip`).
+- **Desktop Integration:** Includes bash scripts to trigger recordings via keyboard shortcuts with beautiful desktop notifications (`notify-send`) and audio cues.
+- **Modern Python:** Managed by `uv` for blistering fast dependency resolution and environment isolation.
 
-### Prerequisites
-*   Ensure `uv` is installed on your system.
-*   Ensure you have either `wl-clipboard` (for Wayland) or `xclip` (for X11) installed for clipboard support.
-*   A valid Google Cloud project with the Cloud Speech-to-Text API enabled.
-*   Google Cloud Application Default Credentials (ADC) configured.
+## 🚀 Quick Start
 
-### Authentication
-You must authenticate with Google Cloud to use the Speech-to-Text API:
+### 1. System Prerequisites
+Ensure you have `uv` installed and one of the following clipboard managers:
+```bash
+# Debian/Ubuntu (X11)
+sudo apt install xclip
+
+# Debian/Ubuntu (Wayland)
+sudo apt install wl-clipboard
+```
+
+### 2. Authentication
+You must authenticate with Google Cloud to use the Speech-to-Text API. Ensure the Speech-to-Text V2 API is enabled in your Google Cloud Project.
 ```bash
 gcloud auth application-default login
 ```
-If your credentials do not automatically resolve the project ID, you can explicitly set it:
-```bash
-export GOOGLE_CLOUD_PROJECT="your-project-id"
-```
+*(If your credentials do not automatically resolve the project ID, export it: `export GOOGLE_CLOUD_PROJECT="your-project-id"`)*
 
-### Running the Agent Directly
-You can run the core Python script directly using `uv`:
+### 3. Usage
+Run the core Python script directly:
 ```bash
 uv run python voice_agent.py
 ```
 
-### Using the Trigger Scripts
-The project provides two bash scripts intended to be bound to system keyboard shortcuts:
+## ⌨️ Desktop Shortcuts
+To make this tool truly awesome, bind one of the provided scripts to a global keyboard shortcut (e.g., `Super + V`):
 
-1.  **`voice_trigger.sh` (Recommended for Desktop Integration):**
-    This script is designed for UI feedback. It ensures only one instance is running, sends desktop notifications using `notify-send` when listening starts and when the transcription is ready to be pasted.
-    ```bash
-    ./voice_trigger.sh
-    ```
+* **`voice_trigger.sh`** *(Recommended)*: Prevents overlapping recordings and sends rich desktop notifications when recording starts and finishes.
+* **`run_voice.sh`**: A stealthier alternative that plays audio cues (`paplay`) on success or failure instead of visual notifications.
 
-2.  **`run_voice.sh`:**
-    A simpler alternative that logs output to `/tmp/voice_debug.log` and plays audio cues (`paplay`) on success or failure instead of visual notifications.
-    ```bash
-    ./run_voice.sh
-    ```
+## 🧠 Architecture
+1. **Trigger:** You press your shortcut key (`voice_trigger.sh`).
+2. **Listen:** `voice_agent.py` wakes up, detects when you start speaking, and stops after `1.5s` of silence.
+3. **Process:** Audio is temporarily buffered to `/tmp/voice_input.wav`.
+4. **Cloud Inference:** Uploaded securely to `us-central1-speech.googleapis.com` for rapid Chirp 3 transcription.
+5. **Paste:** The text lands directly in your system clipboard.
 
-## Architecture and Flow
-1.  **Activation:** The script is triggered (e.g., via a keyboard shortcut executing `voice_trigger.sh`).
-2.  **Recording:** `voice_agent.py` listens to the microphone using `sounddevice`, dynamically waiting for speech to begin and automatically stopping after a defined period of silence (`1.5` seconds by default).
-3.  **Local Processing:** The audio array is saved temporarily to `/tmp/voice_input.wav`.
-4.  **Cloud Transcription:** The WAV file is uploaded to the Google Cloud Speech-to-Text v2 API and processed by the `chirp` model, which provides high-accuracy, multilingual transcription.
-5.  **Output:** The resulting text is copied to the system clipboard, ready to be pasted into any application.
-
-## Development Conventions
-*   **Dependency Management:** All dependencies are declared in `pyproject.toml` and locked in `uv.lock`. Use `uv add <package>` to introduce new dependencies.
-*   **Model Selection:** The project explicitly uses the `chirp` model via the v2 API for the best transcription quality across various audio types.
+## 🛠️ Development & Testing
+Follows the **Skywalker Development Workflow**.
+* **Dependencies:** `pyproject.toml` managed by `uv`.
+* **Tests:** `uv run pytest`
+* **Linting/Formatting:** `uv run ruff check .` / `uv run ruff format .`
+* **Types:** `uv run mypy src`
