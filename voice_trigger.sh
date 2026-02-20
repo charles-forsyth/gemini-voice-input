@@ -27,5 +27,7 @@ else
     # We can check if it was due to missing API key specifically:
     if grep -q "Error: Could not determine project ID" /tmp/gemini_voice.log; then
         notify-send -t 4000 -i dialog-error "Gemini Voice Error" "API Key missing."
+    else
+        notify-send -t 4000 -i dialog-error "Gemini Voice Error" "Transcription or clipboard copy failed. Check /tmp/gemini_voice.log for details."
     fi
 fi
