@@ -6,7 +6,6 @@ PYTHON_BIN="$PROJECT_DIR/.venv/bin/python"
 SCRIPT="$PROJECT_DIR/voice_agent.py"
 
 # Export the API key explicitly
-export GOOGLE_API_KEY="AIzaSyDeweMLbYtvDpY2ALHloOgWkmhfC0vA_Ig"
 
 # Safety Check: Kill any already-running instances of the python script
 if pgrep -f "$SCRIPT" > /dev/null; then
@@ -26,7 +25,7 @@ if $PYTHON_BIN $SCRIPT > /tmp/gemini_voice.log 2>&1; then
 else
     # It failed or was killed. Do not show the ready notification.
     # We can check if it was due to missing API key specifically:
-    if grep -q "Error: GOOGLE_API_KEY" /tmp/gemini_voice.log; then
+    if grep -q "Error: Could not determine project ID" /tmp/gemini_voice.log; then
         notify-send -t 4000 -i dialog-error "Gemini Voice Error" "API Key missing."
     fi
 fi

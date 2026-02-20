@@ -1,10 +1,11 @@
-import os
 import sys
 import wave
 import numpy as np
 import sounddevice as sd
-from google import genai
 import subprocess
+from google.cloud.speech_v2 import SpeechClient
+from google.cloud.speech_v2.types import cloud_speech
+import google.auth
 
 # Configuration
 THRESHOLD = 0.02  # Silence threshold (RMS amplitude)
@@ -16,7 +17,6 @@ TEMP_WAV = "/tmp/voice_input.wav"
 
 def record_until_silence():
     print("🎙️ Listening... (Speak now)", file=sys.stderr)
-
     q = []
     silent_chunks = 0
     chunk_size = int(SAMPLE_RATE * 0.1)  # 100ms chunks
@@ -52,10 +52,8 @@ def record_until_silence():
         print(f"Audio device error: {e}", file=sys.stderr)
         sys.exit(1)
 
-    print("⏳ Processing audio with Gemini...", file=sys.stderr)
+    print("⏳ Processing audio with Google Cloud Speech (Chirp 3)...", file=sys.stderr)
     audio_data = np.concatenate(q, axis=0)
-
-    # Convert float32 to int16 for WAV saving
     audio_data_int16 = np.int16(audio_data * 32767)
 
     with wave.open(TEMP_WAV, "wb") as wf:
@@ -66,35 +64,45 @@ def record_until_silence():
 
 
 def transcribe_audio():
-    # Ensure API key is set
-    api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        print("Error: API Key not found in environment.", file=sys.stderr)
+    try:
+        credentials, project_id = google.auth.default()
+    except Exception:
+        print(
+            "Error: Could not load Application Default Credentials. Run 'gcloud auth application-default login'.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
-    # The genai SDK prefers GEMINI_API_KEY
-    if not os.environ.get("GEMINI_API_KEY") and api_key:
-        os.environ["GEMINI_API_KEY"] = api_key
+    if not project_id:
+        print(
+            "Error: Could not determine project ID from Application Default Credentials. Set GOOGLE_CLOUD_PROJECT.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
-    client = genai.Client()
+    client = SpeechClient()
 
-    # Use Gemini 3 as requested
-    model_id = "gemini-3-pro-preview"
+    with open(TEMP_WAV, "rb") as f:
+        audio_content = f.read()
+
+    config = cloud_speech.RecognitionConfig(
+        auto_decoding_config=cloud_speech.AutoDetectDecodingConfig(),
+        language_codes=["en-US"],
+        model="chirp",
+    )
+
+    request = cloud_speech.RecognizeRequest(
+        recognizer=f"projects/{project_id}/locations/global/recognizers/_",
+        config=config,
+        content=audio_content,
+    )
 
     try:
-        audio_file = client.files.upload(file=TEMP_WAV)
-        response = client.models.generate_content(
-            model=model_id,
-            contents=[
-                "Transcribe the speech in this audio exactly as spoken. Do not add any conversational filler, markdown formatting, or quotation marks. Just output the raw transcribed text.",
-                audio_file,
-            ],
-        )
-
-        # Clean up
-        client.files.delete(name=audio_file.name)
-
-        return response.text.strip()
+        response = client.recognize(request=request)
+        transcript = ""
+        for result in response.results:
+            transcript += result.alternatives[0].transcript + " "
+        return transcript.strip()
     except Exception as e:
         print(f"Transcription failed: {e}", file=sys.stderr)
         return ""
@@ -102,11 +110,9 @@ def transcribe_audio():
 
 def copy_to_clipboard(text):
     try:
-        # Use wl-copy for Wayland
         subprocess.run(["wl-copy"], input=text.encode("utf-8"), check=True)
         print("📋 Copied to clipboard!", file=sys.stderr)
     except FileNotFoundError:
-        # Fallback to xclip if wl-copy isn't installed
         try:
             subprocess.run(
                 ["xclip", "-selection", "clipboard"],
