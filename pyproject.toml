@@ -1,6 +1,6 @@
 [project]
 name = "gemini-voice-input"
-version = "0.3.0"
+version = "0.3.1"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -17,5 +17,6 @@ dependencies = [
 dev = [
     "mypy>=1.19.1",
     "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
     "ruff>=0.15.2",
 ]

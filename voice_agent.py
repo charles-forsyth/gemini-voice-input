@@ -8,8 +8,9 @@ from google.cloud.speech_v2.types import cloud_speech
 import google.auth
 
 # Configuration
-THRESHOLD = 0.02  # Silence threshold (RMS amplitude)
+THRESHOLD = 0.015  # Silence threshold (RMS amplitude) - Lowered for sensitivity
 SILENCE_LIMIT = 1.5  # Seconds of silence before stopping
+MAX_WAIT_TIME = 10.0  # Maximum seconds to wait for speech to start
 SAMPLE_RATE = 16000
 CHANNELS = 1
 TEMP_WAV = "/tmp/voice_input.wav"
@@ -21,6 +22,8 @@ def record_until_silence():
     silent_chunks = 0
     chunk_size = int(SAMPLE_RATE * 0.1)  # 100ms chunks
     silence_chunks_limit = int(SILENCE_LIMIT / 0.1)
+    max_wait_chunks = int(MAX_WAIT_TIME / 0.1)
+    waited_chunks = 0
 
     try:
         with sd.InputStream(
@@ -33,6 +36,11 @@ def record_until_silence():
                 if rms > THRESHOLD:
                     q.append(data)
                     break
+
+                waited_chunks += 1
+                if waited_chunks > max_wait_chunks:
+                    print("⏱️ Timed out waiting for speech.", file=sys.stderr)
+                    sys.exit(0)
 
             # Record until silence
             while True:
